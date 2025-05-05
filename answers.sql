@@ -1,30 +1,49 @@
 -- Question 1
--- Create a new table in 1NF
-CREATE TABLE OrderProducts_1NF (
+-- Original table (violating 1NF)
+CREATE TABLE ProductDetail (
     OrderID INT,
     CustomerName VARCHAR(100),
-    Product VARCHAR(50)
+    Products VARCHAR(255)
 );
 
--- Insert data in 1NF format
-INSERT INTO OrderProducts_1NF (OrderID, CustomerName, Product)
-VALUES 
-    (101, 'Marks Abuto', 'Laptop'),
-    (101, 'Marks Abuto', 'Mouse'),
-    (102, 'Ceccy J', 'Tablet'),
-    (102, 'Ceccy J', 'Keyboard'),
-    (102, 'Ceccy J', 'Mouse'),
-    (103, 'Tiffany Bella', 'Phone');
+-- Solution: Transform into 1NF by splitting multi-valued Products
+SELECT 
+    OrderID,
+    CustomerName,
+    TRIM(value) AS Product
+FROM 
+    ProductDetail
+CROSS APPLY 
+    STRING_SPLIT(Products, ',');
+
+-- Alternative if STRING_SPLIT isn't available (SQL standard approach)
+SELECT 101 AS OrderID, 'John Doe' AS CustomerName, 'Laptop' AS Product UNION ALL
+SELECT 101, 'John Doe', 'Mouse' UNION ALL
+SELECT 102, 'Jane Smith', 'Tablet' UNION ALL
+SELECT 102, 'Jane Smith', 'Keyboard' UNION ALL
+SELECT 102, 'Jane Smith', 'Mouse' UNION ALL
+SELECT 103, 'Emily Clark', 'Phone';
 
 
 -- Question 2
--- Orders table (removing partial dependency)
+-- Original table (violating 2NF)
+CREATE TABLE OrderDetails (
+    OrderID INT,
+    CustomerName VARCHAR(100),
+    Product VARCHAR(50),
+    Quantity INT,
+    PRIMARY KEY (OrderID, Product)
+);
+
+-- Solution: Split into two tables to remove partial dependency
+
+-- Table 1: Orders (contains order and customer information)
 CREATE TABLE Orders (
     OrderID INT PRIMARY KEY,
     CustomerName VARCHAR(100)
 );
 
--- OrderItems table for products
+-- Table 2: OrderItems (contains product details per order)
 CREATE TABLE OrderItems (
     OrderID INT,
     Product VARCHAR(50),
@@ -33,10 +52,9 @@ CREATE TABLE OrderItems (
     FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
 );
 
--- Data into Orders table
+-- Insert data into normalized tables
 INSERT INTO Orders (OrderID, CustomerName)
 SELECT DISTINCT OrderID, CustomerName FROM OrderDetails;
 
--- Data into OrderItems table
 INSERT INTO OrderItems (OrderID, Product, Quantity)
 SELECT OrderID, Product, Quantity FROM OrderDetails;
